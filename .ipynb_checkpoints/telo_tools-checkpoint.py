@@ -207,7 +207,6 @@ def calculate_apply_teloQuartiles_dataframe(df, ordered_timepoint_list):
     df['timepoint'].cat.set_categories(ordered_timepoint_list, inplace=True)
     df = df.sort_values(['sample id', 'timepoint']).reset_index(drop=True)
     
-    
     for i, row in df.iterrows():
 
         if ordered_timepoint_list[0] in row['timepoint']:
@@ -224,14 +223,26 @@ def calculate_apply_teloQuartiles_dataframe(df, ordered_timepoint_list):
 
 
 
-def quartile_cts_rel_to_df1(df1, df2):
-    df1 = pd.DataFrame(df1)
-    df2 = pd.DataFrame(df2)
+def quartile_cts_rel_to_df1(d_1, d_2):
+    d_1 = pd.DataFrame(d_1)
+    d_2 = pd.DataFrame(d_2)
     
-    quartile_1 = df2[df2 <= df1.quantile(0.25)].count()
-    
-    quartile_2_3 = df2[(df2 > df1.quantile(0.25)) & (df2 < df1.quantile(0.75))].count()
-
-    quartile_4 = df2[df2 >= df1.quantile(0.75)].count()
+    quartile_1 = d_2[d_2 <= d_1.quantile(0.25)].count()
+    quartile_2_3 = d_2[(d_2 > d_1.quantile(0.25)) & (d_2 < d_1.quantile(0.75))].count()
+    quartile_4 = d_2[d_2 >= d_1.quantile(0.75)].count()
     
     return quartile_1.values, quartile_2_3.values, quartile_4.values
+
+
+
+def explode_individual_telos(df):
+    exploded_telos = (df['telo data'].apply(pd.Series)
+        .merge(df, right_index = True, left_index = True)                  
+        .drop('telo data', axis=1)
+        .melt(id_vars = [col for col in df.columns if col != 'telo data'], value_name = "individual telos") 
+        .drop("variable", axis = 1)
+        .dropna())
+    
+    exploded_telos['individual telos'] = exploded_telos['individual telos'].astype('int64')
+    
+    return exploded_telos
