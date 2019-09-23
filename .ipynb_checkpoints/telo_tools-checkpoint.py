@@ -207,6 +207,8 @@ def calculate_apply_teloQuartiles_dataframe(df, ordered_timepoint_list):
     df['timepoint'].cat.set_categories(ordered_timepoint_list, inplace=True)
     df = df.sort_values(['sample id', 'timepoint']).reset_index(drop=True)
     
+    # cap
+    
     for i, row in df.iterrows():
 
         if ordered_timepoint_list[0] in row['timepoint']:
