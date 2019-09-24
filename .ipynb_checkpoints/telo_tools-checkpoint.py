@@ -270,50 +270,72 @@ def explode_individual_telos(df):
 # patient_ids = list(all_patients_df['patient id'].unique())
 # telo_mrp.histogram_plot_groups(x='telo data exploded', data=exploded_telos_all_patients_df, groupby='patient id', iterable=patient_ids)
 
-def histogram_plot_groups(x=None, df=None, sample_id_col=None, groupby=None, num_samps_per_group=None):
+
+def histogram_plot_groups(x=None, df=None, sample_id_col=None, groupby=None, 
+                          num_samps_per_group=None, ordered_timepoint_list=None, n_bins=40):
     
-    iterable = list(df[sample_id_col].unique())
+    all_samples = list(df[sample_id_col].unique())
     group_df = df.groupby(groupby)
     
-    for item in iterable:
-        plot_df = group_df.get_group(item)
+    for sample in all_samples:
         timepoint_telo_values_dict = {}
         
-        for timepoint in plof_df[sample_id_col]:
-            timepoint_telo_values_dict[sample_id] = plot_df[plot_df['timepoint'] == timepoint][x] 
+        plot_df = group_df.get_group(sample).copy()
+        plot_df = order_timepoint_col(plot_df, ordered_timepoint_list)
+
+        sample_unique_timepoints = list(plot_df['timepoint'].unique())
         
-        if num_samps_per_group == 2:
-        
-            non_irrad = plot_df[plot_df['timepoint'] == '1 non irrad'][x]
-            irrad_4_Gy = plot_df[plot_df['timepoint'] == '2 irrad @ 4 Gy'][x]
-            three_B = plot_df[plot_df['timepoint'] == '3 B'][x]
-            four_C = plot_df[plot_df['timepoint'] == '4 C'][x]
-
-            n_bins = 60
-            fig, axs = plt.subplots(2, 2, sharey=True, sharex=True, constrained_layout=True, figsize = (14, 9))
-
-            ax = sns.set_style(style="darkgrid",rc= {'patch.edgecolor': 'black'})
-    #         ax = sns.set(font_scale=1.4)
-
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, non_irrad, non_irrad, f'patient #{item} 1 non rad', 0, 0)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, irrad_4_Gy, non_irrad, f'patient #{item} 2 irrad @ 4 Gy', 0, 1)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, three_B,  non_irrad, f'patient #{item} 3 B', 1, 0)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, four_C,  non_irrad, f'patient #{item} 4 C', 1, 1)
+        for timepoint in sample_unique_timepoints:
             
-        elif num_samps_per_group == 4:
-        
-            non_irrad = plot_df[plot_df['timepoint'] == '1 non irrad'][x]
-            irrad_4_Gy = plot_df[plot_df['timepoint'] == '2 irrad @ 4 Gy'][x]
-            three_B = plot_df[plot_df['timepoint'] == '3 B'][x]
-            four_C = plot_df[plot_df['timepoint'] == '4 C'][x]
+            sample_ID_complete = str(list(plot_df[sample_id_col].unique())[0]) + ' ' + str(timepoint)
+            timepoint_telo_values_dict[sample_ID_complete] = plot_df[plot_df['timepoint'] == timepoint][x]
+            
+        if len(timepoint_telo_values_dict.keys()) > 1:
+            
+            n_rows = len(timepoint_telo_values_dict.keys()) / 2
+            n_rows = int(math.ceil(n_rows))
+  
+            n_bins = n_bins
+            fig, axes = plt.subplots(n_rows, 2, sharey=True, sharex=True, constrained_layout=True, figsize = (12, 8))
+            sns.set_style(style="darkgrid",rc= {'patch.edgecolor': 'black'})
 
-            n_bins = 60
-            fig, axs = plt.subplots(2, 2, sharey=True, sharex=True, constrained_layout=True, figsize = (14, 9))
+            for ax, item in zip(axes.flatten(), timepoint_telo_values_dict.items()):
 
-            ax = sns.set_style(style="darkgrid",rc= {'patch.edgecolor': 'black'})
-    #         ax = sns.set(font_scale=1.4)
+                name, data = item[0], item[1]
+                initial_timepoint = timepoint_telo_values_dict[list(timepoint_telo_values_dict.keys())[0]]
+                histogram_stylizer_divyBins_byQuartile(fig, ax, n_bins, data, initial_timepoint, f'{name}')
+                
+                
 
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, non_irrad, non_irrad, f'patient #{item} 1 non rad', 0, 0)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, irrad_4_Gy, non_irrad, f'patient #{item} 2 irrad @ 4 Gy', 0, 1)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, three_B,  non_irrad, f'patient #{item} 3 B', 1, 0)
-            histogram_stylizer_divyBins_byQuartile(fig, axs, n_bins, four_C,  non_irrad, f'patient #{item} 4 C', 1, 1)
+def histogram_stylizer_divyBins_byQuartile(fig, ax, n_bins, data, initial_timepoint, name):
+
+    data = data.to_numpy()
+    initial_timepoint = initial_timepoint.to_numpy()
+
+    N, bins, patches = ax.hist(data, bins=n_bins, edgecolor='black')
+
+    for a in range(len(patches)):
+        if bins[a] <= np.quantile(initial_timepoint, 0.25):
+            patches[a].set_facecolor('#fdff38')
+
+        elif np.quantile(initial_timepoint, 0.25) < bins[a] and bins[a] <= np.quantile(initial_timepoint, 0.50):
+            patches[a].set_facecolor('#d0fefe')
+
+        elif np.quantile(initial_timepoint, 0.50) < bins[a] and bins[a] <= np.quantile(initial_timepoint, 0.75):
+            patches[a].set_facecolor('#d0fefe')
+
+        elif bins[a] > np.quantile(initial_timepoint, 0.75): 
+            patches[a].set_facecolor('#ffbacd')
+            
+    ax.set_title(f"{name}", fontsize=18,)
+    ax.tick_params(labelsize=12)
+#     ax.xaxis.set_major_locator(plt.MaxNLocator(12))
+
+
+
+def order_timepoint_col(df, ordered_timepoint_list):
+    df['timepoint'] = df['timepoint'].astype('category')
+    df['timepoint'].cat.set_categories(ordered_timepoint_list, inplace=True)
+    df = df.sort_values(['sample id', 'timepoint']).reset_index(drop=True).copy()
+    
+    return df
