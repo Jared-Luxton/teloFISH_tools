@@ -19,8 +19,11 @@ import seaborn as sns
 # telomere length values
 from ast import literal_eval
 
-# statistics
+# statistics, numbers
 from scipy import stats
+import math
+
+
 
 ####################################################################################################
 
@@ -121,12 +124,12 @@ def generate_dictionary_for_telomere_length_data(patharg):
 
 
 
-def make_dataframe_from_telomere_data_dict(telo_dict):
+def make_dataframe_from_telomere_data_dict(telo_dict, timepoint_list):
     data = []
     
     for name_key, telo_value in telo_dict.items():
         id_num = name_key[3:7]
-        time_point = get_timepoint(name_key)
+        time_point = get_timepoint(name_key, timepoint_list)
         telo_value = gen_missing_values_and_impute_or_randomsampledown(30, 184, pd.Series(telo_value.values.reshape(-1,)))
         
         data.append([id_num, time_point, telo_value, np.mean(telo_value.values)])
@@ -147,26 +150,13 @@ def make_dataframe_from_telomere_data_dict(telo_dict):
 
 
 
-def get_timepoint(name_key):
-    timepoint_5_char = ['L-270', 'L-180', 'FD140', 'FD260', 'R+105', 'R+180', 'R+270']
-    timepoint_4_char = ['L-60', 'FD45', 'FD90', 'R+60']
-    timepoint_3_char = ['R+5', 'R+7'] 
+def get_timepoint(name_key, ordered_timepoint_list):
     
-    for timepoint in timepoint_5_char:
+    for timepoint in ordered_timepoint_list:
         if timepoint in name_key:
-            timepoint = name_key[-5:]
-            return timepoint.strip()
-    
-    for timepoint in timepoint_4_char:
-        if timepoint in name_key:
-            timepoint = name_key[-4:]
-            return timepoint.strip()
-            
-    for timepoint in timepoint_3_char:
-        if timepoint in name_key:
-            timepoint = name_key[-3:]
-            return timepoint.strip()
-
+            cleaned_timepoint = name_key[-len(timepoint):]
+            return cleaned_timepoint.strip()
+        
         
         
 def gen_missing_values_and_impute_or_randomsampledown(n_cells, telosPercell, df):
