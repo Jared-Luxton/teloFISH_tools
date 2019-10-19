@@ -94,9 +94,12 @@ def generate_dictionary_for_telomere_length_data(patharg):
             individual_telos_lengths = df.iloc[:, 3]
             
             # these numbers correspond to rows containing information about the DAPI counterstain, NOT telomeres, so we drop
-            DAPI_values_to_drop=[5, 192, 379, 566, 753, 940, 1127, 1314, 1501, 1688, 1875, 2062,
-                                 2249, 2436, 2623, 2810, 2997, 3184, 3371, 3558, 3745, 3932, 4119, 
-                                 4306, 4493, 4680, 4867, 5054, 5241, 5428]
+            DAPI_values_to_drop=[5, 192, 379, 566, 753, 940, 1127, 1314, 1501, 1688,] 
+                                 
+                                 
+#                                  1875, 2062,
+#                                  2249, 2436, 2623, 2810, 2997, 3184, 3371, 3558, 3745, 3932, 4119, 
+#                                  4306, 4493, 4680, 4867, 5054, 5241, 5428]
             
             # drop DAPI info, grab only telo measurements in the col
             # enforce the telomere measurements as a numeric data type
@@ -125,13 +128,34 @@ def generate_dictionary_for_telomere_length_data(patharg):
 
 
 def make_dataframe_from_telomere_data_dict(telo_dict, timepoint_list):
+    """
+    fxn
+
+    Args:
+        big_table: An open Bigtable Table instance.
+        keys: A sequence of strings representing the key of each table row
+        to fetch .. other_silly_variable: Another optional variable, that has a much
+        longer name than the other args, and which does nothing.
+
+    Returns:
+        A dict mapping keys to the corresponding data..
+
+                {'Serak': ('Rigel VII', 'Preparer'),
+                 'Zim': ('Irk', 'Invader'),
+                 'Lrrr': ('Omicron Persei 8', 'Emperor')}
+
+        If a key from the keys argument is missing from the dictionary,
+        then that row was not found in the table.
+
+    Raises:
+        IOError: An error occurred accessing the bigtable.Table object.
+    """
     data = []
     
     for name_key, telo_value in telo_dict.items():
         id_num = name_key[3:7]
         time_point = get_timepoint(name_key, timepoint_list)
         telo_value = gen_missing_values_and_impute_or_randomsampledown(30, 184, pd.Series(telo_value.values.reshape(-1,)))
-        
         data.append([id_num, time_point, telo_value, np.mean(telo_value.values)])
 
     df = pd.DataFrame(data, columns = ['sample id', 'timepoint', 'telo data', 'telo means'])
